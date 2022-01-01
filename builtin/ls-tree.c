@@ -34,6 +34,14 @@ static unsigned int shown_bits;
 #define SHOW_MODE (1 << 4)
 #define SHOW_DEFAULT 29 /* 11101 size is not shown to output by default */
 
+struct shown_data {
+	unsigned mode;
+	enum object_type type;
+	const struct object_id *oid;
+	const char *pathname;
+	struct strbuf *base;
+};
+
 static const  char * const ls_tree_usage[] = {
 	N_("git ls-tree [<options>] <tree-ish> [<path>...]"),
 	NULL
@@ -98,17 +106,15 @@ static int show_recursive(const char *base, size_t baselen,
 	return 0;
 }
 
-static int show_default(const struct object_id *oid, enum object_type type,
-			const char *pathname, unsigned mode,
-			struct strbuf *base)
+static int show_default(struct shown_data *data)
 {
-	size_t baselen = base->len;
+	size_t baselen = data->base->len;
 
 	if (shown_bits & SHOW_SIZE) {
 		char size_text[24];
-		if (type == OBJ_BLOB) {
+		if (data->type == OBJ_BLOB) {
 			unsigned long size;
-			if (oid_object_info(the_repository, oid, &size) == OBJ_BAD)
+			if (oid_object_info(the_repository, data->oid, &size) == OBJ_BAD)
 				xsnprintf(size_text, sizeof(size_text), "BAD");
 			else
 				xsnprintf(size_text, sizeof(size_text),
@@ -116,18 +122,18 @@ static int show_default(const struct object_id *oid, enum object_type type,
 		} else {
 			xsnprintf(size_text, sizeof(size_text), "-");
 		}
-		printf("%06o %s %s %7s\t", mode, type_name(type),
-		find_unique_abbrev(oid, abbrev), size_text);
+		printf("%06o %s %s %7s\t", data->mode, type_name(data->type),
+		find_unique_abbrev(data->oid, abbrev), size_text);
 	} else {
-		printf("%06o %s %s\t", mode, type_name(type),
-		find_unique_abbrev(oid, abbrev));
+		printf("%06o %s %s\t", data->mode, type_name(data->type),
+		find_unique_abbrev(data->oid, abbrev));
 	}
-	baselen = base->len;
-	strbuf_addstr(base, pathname);
-	write_name_quoted_relative(base->buf,
+	baselen = data->base->len;
+	strbuf_addstr(data->base, data->pathname);
+	write_name_quoted_relative(data->base->buf,
 				   chomp_prefix ? ls_tree_prefix : NULL, stdout,
 				   line_termination);
-	strbuf_setlen(base, baselen);
+	strbuf_setlen(data->base, baselen);
 	return 1;
 }
 
@@ -154,11 +160,16 @@ static int show_tree(const struct object_id *oid, struct strbuf *base,
 {
 	int retval = 0;
 	size_t baselen;
-	enum object_type type = OBJ_BLOB;
+	struct shown_data data = {
+		.mode = mode,
+		.type = OBJ_BLOB,
+		.oid = oid,
+		.pathname = pathname,
+		.base = base,
+	};
 
-	if (show_tree_init(&type, base, pathname, mode, &retval))
+	if (show_tree_init(&data.type, base, pathname, mode, &retval))
 		return retval;
-
 	if (!(shown_bits ^ SHOW_OBJECT_NAME)) {
 		printf("%s%c", find_unique_abbrev(oid, abbrev), line_termination);
 		return retval;
@@ -175,7 +186,7 @@ static int show_tree(const struct object_id *oid, struct strbuf *base,
 
 	if (!(shown_bits ^ SHOW_DEFAULT) ||
 	    !(shown_bits ^ (SHOW_DEFAULT | SHOW_SIZE)))
-		show_default(oid, type, pathname, mode, base);
+		show_default(&data);
 
 	return retval;
 }
