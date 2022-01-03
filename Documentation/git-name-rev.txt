@@ -51,8 +51,8 @@ OPTIONS
 	hexes (say $hex) with "$hex ($rev_name)".  When used with
 	--name-only, substitute with "$rev_name", omitting $hex
 	altogether.
-
-	For example:
++
+For example:
 +
 ----------
 $ cat sample.txt
