@@ -625,8 +625,9 @@ int cmd_name_rev(int argc, const char **argv, const char *prefix)
 	if (annotate_stdin) {
 		struct strbuf sb = STRBUF_INIT;
 
-		while (strbuf_getwholeline(&sb, stdin, '\n') != EOF) {
+		while (strbuf_getline(&sb, stdin) != EOF) {
 			name_rev_line(sb.buf, &data);
+			putchar('\n');
 		}
 		strbuf_release(&sb);
 	} else if (all) {
